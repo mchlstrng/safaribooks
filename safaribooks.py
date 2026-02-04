@@ -572,9 +572,18 @@ class SafariBooks:
         return result + (self.get_book_chapters(page + 1) if response["next"] else [])
 
     def get_default_cover(self):
-        response = self.requests_provider(self.book_info["cover"], stream=True)
+        cover_url = self.book_info["cover"]
+        # Patch: if the cover_url is the old API format, convert to new format
+        if "/api/v2/epubs/" in cover_url and "/files/cover.htm" in cover_url:
+            # Extract book id from the URL
+            import re
+            m = re.search(r"epubs/(urn:orm:book:[^/]+)/files/cover.htm", cover_url)
+            if m:
+                book_id = m.group(1)
+                cover_url = f"https://learning.oreilly.com/covers/{book_id}/"
+        response = self.requests_provider(cover_url, stream=True)
         if response == 0:
-            self.display.error("Error trying to retrieve the cover: %s" % self.book_info["cover"])
+            self.display.error(f"Error trying to retrieve the cover: {cover_url}")
             return False
 
         file_ext = response.headers["Content-Type"].split("/")[-1]
